@@ -1,0 +1,118 @@
+{
+  "registry_version": "2026.07.22",
+  "lighthouse_version": "13.4.0",
+  "audits": {
+    "cache-insight": {
+      "canonical_key": "cache_policy",
+      "status": "primary"
+    },
+    "cls-culprits-insight": {
+      "canonical_key": "cls_culprits",
+      "status": "primary",
+      "details_type": "list"
+    },
+    "document-latency-insight": {
+      "canonical_key": "document_latency",
+      "status": "primary"
+    },
+    "dom-size-insight": {
+      "canonical_key": "dom_size",
+      "status": "primary"
+    },
+    "duplicated-javascript-insight": {
+      "canonical_key": "js_duplicated",
+      "status": "primary"
+    },
+    "font-display-insight": {
+      "canonical_key": "font_display",
+      "status": "primary"
+    },
+    "forced-reflow-insight": {
+      "canonical_key": "forced_reflow",
+      "status": "primary"
+    },
+    "image-delivery-insight": {
+      "canonical_key": "image_delivery",
+      "status": "primary",
+      "details_type": "table"
+    },
+    "inp-breakdown-insight": {
+      "canonical_key": "inp_latency",
+      "status": "primary"
+    },
+    "lcp-breakdown-insight": {
+      "canonical_key": "lcp_phases",
+      "status": "primary"
+    },
+    "lcp-discovery-insight": {
+      "canonical_key": "lcp_discovery",
+      "status": "primary"
+    },
+    "legacy-javascript-insight": {
+      "canonical_key": "js_legacy",
+      "status": "primary"
+    },
+    "network-dependency-tree-insight": {
+      "canonical_key": "network_dependency",
+      "status": "primary",
+      "details_type": "list"
+    },
+    "render-blocking-insight": {
+      "canonical_key": "render_blocking",
+      "status": "primary",
+      "details_type": "table"
+    },
+    "third-parties-insight": {
+      "canonical_key": "third_party_impact",
+      "status": "primary"
+    },
+    "viewport-insight": {
+      "canonical_key": "viewport",
+      "status": "primary"
+    },
+    "modern-http-insight": {
+      "canonical_key": "modern_http",
+      "status": "conditional"
+    },
+    "network-requests": {
+      "canonical_key": "network_requests",
+      "status": "legacy_fallback"
+    },
+    "mainthread-work-breakdown": {
+      "canonical_key": "main_thread",
+      "status": "legacy_fallback"
+    },
+    "bootup-time": {
+      "canonical_key": "js_bootup",
+      "status": "legacy_fallback"
+    },
+    "unused-javascript": {
+      "canonical_key": "js_unused",
+      "status": "legacy_fallback"
+    },
+    "unused-css-rules": {
+      "canonical_key": "css_unused",
+      "status": "legacy_fallback"
+    },
+    "total-byte-weight": {
+      "canonical_key": "total_byte_weight",
+      "status": "legacy_fallback"
+    },
+    "layout-shifts": {
+      "canonical_key": "cls_culprits",
+      "status": "legacy_fallback"
+    },
+    "resource-summary": {
+      "canonical_key": "resource_summary",
+      "status": "legacy_fallback"
+    },
+    "third-party-summary": {
+      "canonical_key": null,
+      "status": "removed"
+    },
+    "critical-request-chains": {
+      "canonical_key": null,
+      "status": "removed"
+    }
+  }
+}
