@@ -1,0 +1,54 @@
+{
+  "_comment": "Ground-truth COMPAT registry seed, captured from a LIVE PSI runPagespeed response. Source: wikipedia.org mobile, Lighthouse 13.4.0, 2026-07-22. This is the authoritative audit-ID + detail-shape map that supersedes all search-derived guesses from Rounds 1-3. registry_version uses CalVer.",
+  "registry_version": "2026.07.22",
+  "lighthouse_version_observed": "13.4.0",
+  "insight_audits_present": [
+    {"id": "cache-insight", "canonical_key": "cache_policy", "note": "NOT use-cache-insight (spec was wrong)"},
+    {"id": "cls-culprits-insight", "canonical_key": "cls_culprits", "details_type": "list", "details_keys": ["items", "type"]},
+    {"id": "document-latency-insight", "canonical_key": "document_latency"},
+    {"id": "dom-size-insight", "canonical_key": "dom_size"},
+    {"id": "duplicated-javascript-insight", "canonical_key": "js_duplicated"},
+    {"id": "font-display-insight", "canonical_key": "font_display"},
+    {"id": "forced-reflow-insight", "canonical_key": "forced_reflow", "note": "REAL (Gemini daemon said hallucinated; wrong)"},
+    {"id": "image-delivery-insight", "canonical_key": "image_delivery", "details_type": "table", "score_display_mode": "metricSavings", "details_keys": ["debugData", "items", "headings", "type"]},
+    {"id": "inp-breakdown-insight", "canonical_key": "inp_latency", "note": "NOT interaction-to-next-paint-insight (R1 correction was wrong)"},
+    {"id": "lcp-breakdown-insight", "canonical_key": "lcp_phases", "note": "NOT lcp-phases-insight (R1 correction was wrong; original spec right)"},
+    {"id": "lcp-discovery-insight", "canonical_key": "lcp_discovery"},
+    {"id": "legacy-javascript-insight", "canonical_key": "js_legacy"},
+    {"id": "network-dependency-tree-insight", "canonical_key": "network_dependency", "details_type": "list", "details_keys": ["items", "type"], "note": "REAL (Gemini daemon said hallucinated; wrong)"},
+    {"id": "render-blocking-insight", "canonical_key": "render_blocking", "details_type": "table", "score_display_mode": "metricSavings", "details_keys": ["items", "headings", "type"]},
+    {"id": "third-parties-insight", "canonical_key": "third_party_impact"},
+    {"id": "viewport-insight", "canonical_key": "viewport"}
+  ],
+  "insight_audits_conditional": [
+    {"id": "modern-http-insight", "canonical_key": "modern_http", "status": "conditional", "note": "absent for wikipedia (HTTP/2 site); appears only when HTTP/1.1 detected"}
+  ],
+  "classic_audits_surviving_LH13": [
+    "network-requests", "mainthread-work-breakdown", "bootup-time",
+    "unused-javascript", "unused-css-rules", "total-byte-weight",
+    "layout-shifts", "resource-summary"
+  ],
+  "classic_audits_removed_LH13": [
+    "third-party-summary", "critical-request-chains"
+  ],
+  "_fixture_verified_present": "resource-summary (table,9 items) and layout-shifts (table) confirmed present in the live LH13.4.0 fixture; earlier search-derived 'removed' claims were wrong. Fixture wins.",
+  "corrections_vs_spec": [
+    "layout-shifts is STILL PRESENT (R1 marked it removed; wrong) - coexists with cls-culprits-insight",
+    "lcp-breakdown-insight (not lcp-phases-insight)",
+    "inp-breakdown-insight (not interaction-to-next-paint-insight)",
+    "cache-insight (not use-cache-insight)",
+    "network-dependency-tree-insight and forced-reflow-insight are REAL",
+    "modern-http-insight is conditional, not guaranteed",
+    "insight detail shapes: two forms observed - 'list' (items,type) and 'table' (items,headings,type,+metricSavings)"
+  ],
+  "crux_metrics_present_confirmed": [
+    "largest_contentful_paint", "cumulative_layout_shift", "interaction_to_next_paint",
+    "first_contentful_paint", "experimental_time_to_first_byte", "round_trip_time",
+    "navigation_types", "largest_contentful_paint_resource_type",
+    "largest_contentful_paint_image_element_render_delay",
+    "largest_contentful_paint_image_resource_load_delay",
+    "largest_contentful_paint_image_resource_load_duration",
+    "largest_contentful_paint_image_time_to_first_byte"
+  ],
+  "crux_fid_confirmed_absent": true
+}

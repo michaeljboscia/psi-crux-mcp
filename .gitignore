@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+*.egg-info/
+.env
+*.local.env
+
+# secrets / scratch
+scratchpad/
+psi_keys.txt
+
+# OSS hygiene: proprietary reference source NEVER ships
+reference/gtm-python/
+
+# OSS hygiene: internal design/planning corpus stays local, never published
+findings/
+BUILD_SPEC.md
+REQUIREMENTS.md
+GTM_vs_existing_MCP_comparison.md
+PLAN.md
+PRD.md
+APP_FLOW.md
+TECH_STACK.md
+BACKEND_STRUCTURE.md
+IMPLEMENTATION_PLAN.md
+TEST_PLAN.md
+DESIGN_SYSTEM.md
+FRONTEND_GUIDELINES.md
+CLAUDE.md
+progress.txt
+LESSONS.md
+
+# ceremony/build internal state
+.goatrodeo/
+.goatrodeo.events.log
+.goatrodeo.lock
+.goatrodeo.session
+reference/fixtures/*.raw.json

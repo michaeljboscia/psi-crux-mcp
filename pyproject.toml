@@ -1,0 +1,53 @@
+# pyproject.toml — psi-crux-mcp
+# FEAT-013 scaffold. Versions from TECH_STACK.md. Base install = core + MCP + SQLite (stdlib).
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "psi-crux-mcp"
+version = "0.1.0"
+description = "PageSpeed Insights + Chrome UX Report MCP server (LH13-correct, CrUX History, key-ring, persistence)"
+readme = "README.md"
+requires-python = ">=3.11,<3.15"
+license = { text = "MIT" }
+authors = [{ name = "Michael Boscia" }]
+dependencies = [
+    "fastmcp>=2.9",        # Prefect-maintained; sync def tools auto-threadpooled (D-01)
+    "httpx>=0.27",         # SYNC httpx.Client in core (D-01) — never async
+    "pydantic>=2.7,<3",
+    "tenacity>=8.2",
+    "structlog>=24.1",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "cachetools>=5.3",
+    "platformdirs>=4.2",
+]
+
+[project.optional-dependencies]
+persist-postgres = ["psycopg[binary]>=3.1"]
+prefect = ["prefect>=3.0"]
+telemetry-posthog = ["posthog>=3.5"]
+telemetry-otlp = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
+all = ["psycopg[binary]>=3.1", "prefect>=3.0", "posthog>=3.5", "opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
+dev = ["pytest>=8", "pytest-asyncio", "respx>=0.21", "ruff", "mypy", "pip-audit", "coverage"]
+
+[project.scripts]
+psi-crux-mcp = "psi_crux_mcp.server:main"
+psi-crux-prefect = "psi_crux_prefect.cli:main"
+psi-crux = "psi_crux_core.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/psi_crux_core", "src/psi_crux_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+packages = ["psi_crux_core", "psi_crux_mcp"]
