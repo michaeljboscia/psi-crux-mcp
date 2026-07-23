@@ -17,11 +17,23 @@ from psi_crux_core.logging import configure
 from psi_crux_core.models import ErrorEnvelope
 from psi_crux_core.parsers.metrics import LabCwvMissing, PsiRuntimeError
 from psi_crux_core.psi_audit_service import PsiAuditService
+from psi_crux_core.security import TargetBlocked, validate_target
 from psi_crux_core.service import CruxService
+from psi_crux_core.telemetry import TelemetrySink, emit, get_sink, timed
 
 mcp: FastMCP = FastMCP("psi-crux-mcp")
 _crux: CruxService | None = None
 _psi: PsiAuditService | None = None
+_sink_i: TelemetrySink | None = None
+
+
+def _sink() -> TelemetrySink:
+    global _sink_i
+    if _sink_i is None:
+        import os
+        cfg = Config.resolve()
+        _sink_i = get_sink(cfg.telemetry_backend, posthog_key=os.getenv("POSTHOG_PROJECT_API_KEY"))
+    return _sink_i
 
 
 def _crux_svc() -> CruxService:
@@ -42,11 +54,19 @@ def _dual(markdown: str, structured: dict) -> dict:
     return {"content": [{"type": "text", "text": markdown}], "structuredContent": structured}
 
 
-def _guard(fn: Callable[[], dict]) -> dict:
-    """Run a tool body; map any failure to the error envelope (REQ-ERR-001). No trace ever leaks."""
+def _guard(tool: str, fn: Callable[[], dict]) -> dict:
+    """Run a tool body; emit telemetry; map any failure to the error envelope (REQ-ERR-001).
+    No trace, key, or raw payload ever leaks. Telemetry never blocks/fails the tool (REQ-OBS-006)."""
+    t0 = timed()
     try:
-        return fn()
+        out = fn()
+        emit(_sink(), "tool_call", tool=tool, status="ok", duration_ms=int((timed() - t0) * 1000))
+        return out
+    except TargetBlocked as e:
+        env = ErrorEnvelope(code="TARGET_BLOCKED", category="validation", retryable=False,
+                            message="That target URL is not allowed.", resolution=str(e)[:200])
     except QuotaCooldown as e:
+        emit(_sink(), "quota", tool=tool, retry_after_seconds=e.retry_after_seconds)
         env = ErrorEnvelope(code="QUOTA_COOLDOWN", category="quota", retryable=True,
                             message=f"All API keys are cooling; retry in {e.retry_after_seconds}s.",
                             retry_after_seconds=e.retry_after_seconds,
@@ -66,6 +86,7 @@ def _guard(fn: Callable[[], dict]) -> dict:
     except Exception as e:  # noqa: BLE001
         env = ErrorEnvelope(code="INTERNAL", category="internal", retryable=False,
                             message="The tool failed.", resolution=str(e)[:200])
+    emit(_sink(), "error", tool=tool, code=env.code)
     return _dual(env.message, env.model_dump(exclude_none=True))
 
 
@@ -77,9 +98,10 @@ def psi_audit(url: str, strategy: str = "mobile") -> dict:
     strategy: "mobile" (default) or "desktop".
     """
     def body() -> dict:
+        validate_target(url)
         r = _psi_svc().audit(url, strategy)
         return _dual(r["content_markdown"], {"run_id": r["run_id"], **r["data"]})
-    return _guard(body)
+    return _guard("psi_audit", body)
 
 
 @mcp.tool()
@@ -95,7 +117,7 @@ def recommend(url: str = "", run_id: str = "", limit: int = 10) -> dict:
         for r in rec["recommendations"]:
             lines.append(f"- **{r['title']}** (`{r['canonical_key']}`, {r['advice_status']})")
         return _dual("\n".join(lines), rec)
-    return _guard(body)
+    return _guard("recommend", body)
 
 
 @mcp.tool()
@@ -106,6 +128,7 @@ def crux_query(target: str, mode: str = "current", form_factor: str = "PHONE") -
     form_factor: PHONE (default), DESKTOP, or TABLET.
     """
     def body() -> dict:
+        validate_target(target)
         svc = _crux_svc()
         if mode == "history":
             r = svc.query_history(target, form_factor)
@@ -114,7 +137,7 @@ def crux_query(target: str, mode: str = "current", form_factor: str = "PHONE") -
         else:
             r = svc.query_current(target, form_factor)
         return _dual(r.content_markdown, {"run_id": r.run_id, **r.data})
-    return _guard(body)
+    return _guard("crux_query", body)
 
 
 @mcp.tool()
@@ -128,7 +151,7 @@ def ops(action: str = "keyring_stats") -> dict:
                          {"registry_version": reg.version, "lighthouse_version": reg.lighthouse_version})
         stats = _crux_svc()._keyring.stats()  # noqa: SLF001 — ops introspection
         return _dual(f"{len(stats)} key(s) in ring", {"keyring": stats})
-    return _guard(body)
+    return _guard("ops", body)
 
 
 def main() -> None:
