@@ -7,9 +7,19 @@ validation happens in the parser (REQ-ERR-003), not here.
 from __future__ import annotations
 
 import httpx
+from tenacity import (
+    retry, retry_if_exception, stop_after_attempt, wait_exponential,
+)
 
 from .keyring import Keyring
 from .logging import get_logger
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """Retry 5xx + network errors; never retry 4xx (REQ-ENG-001)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code >= 500
+    return isinstance(exc, (httpx.TimeoutException, httpx.TransportError))
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 DEFAULT_CATEGORIES = ("performance", "best-practices", "accessibility", "seo")
@@ -37,6 +47,9 @@ class PsiClient:
                     return self._call(alt, strategy, categories, quota_user)
             raise
 
+    @retry(retry=retry_if_exception(_is_transient),
+           stop=stop_after_attempt(4), wait=wait_exponential(multiplier=1, max=10),
+           reraise=True)
     def _call(self, url: str, strategy: str, categories: tuple[str, ...],
               quota_user: str | None) -> dict:
         lease = self._keyring.acquire(max_wait_s=0.0)

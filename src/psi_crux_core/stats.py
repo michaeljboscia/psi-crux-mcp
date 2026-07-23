@@ -29,10 +29,14 @@ def mann_kendall(series: list[float | None]) -> Trend:
             s += (xs[j] > xs[i]) - (xs[j] < xs[i])
     # threshold scales with the number of comparisons; keep it simple + conservative
     thresh = max(1, n)
+    delta = xs[-1] - xs[0]
     if s <= -thresh:
         direction = "improving"      # metric went DOWN over time = better
     elif s >= thresh:
         direction = "regressing"
     else:
         direction = "flat"
-    return Trend(direction, s, n, xs[-1] - xs[0])
+    # L-007: don't assert a direction the endpoint movement contradicts — call it flat (noisy).
+    if (direction == "improving" and delta > 0) or (direction == "regressing" and delta < 0):
+        direction = "flat"
+    return Trend(direction, s, n, delta)

@@ -48,6 +48,9 @@ class PsiAuditService:
         cc = self._repo.persist_scan(
             run_id, idn, strategy, scan.core, scan.insights.rows, scan.network_rows,
             scan.bp_rows, scan.resource_rows, self._registry.version, [], scan.compat_warnings,
+            main_thread_rows=scan.main_thread_rows, script_rows=scan.script_rows,
+            opportunity_rows=scan.opportunity_rows, third_party_rows=scan.third_party_rows,
+            cwv_element_rows=scan.cwv_element_rows,
         )
         self._remember(run_id, idn, strategy, scan)
         _log.info("psi_audit_ok", run_id=run_id, status=cc.status, target=idn.canonical_url)

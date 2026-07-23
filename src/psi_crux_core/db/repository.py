@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 
 from ..url_identity import UrlIdentity
 from .models import (
-    Base, PsiBestPractice, PsiInsight, PsiNetworkRequest, PsiResourceSummary, PsiResult, ScanRun,
+    Base, PsiBestPractice, PsiCwvElement, PsiInsight, PsiMainThread, PsiNetworkRequest,
+    PsiOpportunity, PsiResourceSummary, PsiResult, PsiScript, PsiThirdParty, ScanRun,
 )
 
 
@@ -48,6 +49,9 @@ class Repository:
         insight_rows: list, network_rows: list[dict], bp_rows: list[dict],
         resource_rows: list[dict], registry_version: str,
         parser_warnings: list[str], compat_warnings: list[str],
+        main_thread_rows: list[dict] | None = None, script_rows: list[dict] | None = None,
+        opportunity_rows: list[dict] | None = None, third_party_rows: list[dict] | None = None,
+        cwv_element_rows: list[dict] | None = None,
         fault_table: str | None = None,     # test hook: force a named branch to fail
     ) -> CompletionContract:
         cc = CompletionContract(
@@ -84,6 +88,16 @@ class Repository:
                                       for row in bp_rows],
                 "psi_resource_summary": [PsiResourceSummary(psi_result_id=result.id, **row)
                                          for row in resource_rows],
+                "psi_main_thread": [PsiMainThread(psi_result_id=result.id, **row)
+                                    for row in (main_thread_rows or [])],
+                "psi_script": [PsiScript(psi_result_id=result.id, **row)
+                               for row in (script_rows or [])],
+                "psi_opportunity": [PsiOpportunity(psi_result_id=result.id, **row)
+                                    for row in (opportunity_rows or [])],
+                "psi_third_party": [PsiThirdParty(psi_result_id=result.id, **row)
+                                    for row in (third_party_rows or [])],
+                "psi_cwv_element": [PsiCwvElement(psi_result_id=result.id, **row)
+                                    for row in (cwv_element_rows or [])],
             }
             for table, objs in branches.items():
                 try:

@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 
 from ..compat.registry import CompatRegistry
 from .best_practices import parse_best_practices
+from .branches import (
+    parse_cwv_elements, parse_main_thread, parse_opportunities, parse_scripts, parse_third_party,
+)
 from .insights import InsightParseResult, parse_insights
 from .metrics import parse_core_metrics
 from .network import parse_network_requests, parse_resource_summary
@@ -29,6 +32,11 @@ class PsiScan:
     network_rows: list[dict]
     bp_rows: list[dict]
     resource_rows: list[dict]
+    main_thread_rows: list[dict] = field(default_factory=list)
+    script_rows: list[dict] = field(default_factory=list)
+    opportunity_rows: list[dict] = field(default_factory=list)
+    third_party_rows: list[dict] = field(default_factory=list)
+    cwv_element_rows: list[dict] = field(default_factory=list)
     compat_warnings: list[str] = field(default_factory=list)
 
 
@@ -41,6 +49,11 @@ def assemble(payload: dict, registry: CompatRegistry) -> PsiScan:
         network_rows=parse_network_requests(payload),
         bp_rows=parse_best_practices(payload, registry),
         resource_rows=parse_resource_summary(payload),
+        main_thread_rows=parse_main_thread(payload),
+        script_rows=parse_scripts(payload),
+        opportunity_rows=parse_opportunities(payload, registry),
+        third_party_rows=parse_third_party(payload, registry),
+        cwv_element_rows=parse_cwv_elements(payload, registry),
         compat_warnings=ins.compat_warnings,
     )
 
