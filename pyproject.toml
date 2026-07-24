@@ -30,7 +30,7 @@ prefect = ["prefect>=3.0"]
 telemetry-posthog = ["posthog>=3.5"]
 telemetry-otlp = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
 all = ["psycopg[binary]>=3.1", "prefect>=3.0", "posthog>=3.5", "opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
-dev = ["pytest>=8", "pytest-asyncio", "respx>=0.21", "ruff", "mypy", "pip-audit", "coverage"]
+dev = ["pytest>=8", "pytest-asyncio", "respx>=0.21", "ruff==0.15.22", "mypy==1.14.1", "pip-audit", "coverage"]
 
 [project.scripts]
 psi-crux-mcp = "psi_crux_mcp.server:main"

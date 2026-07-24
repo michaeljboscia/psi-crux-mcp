@@ -22,7 +22,7 @@ def _has_gcloud() -> bool:
         return False
     try:
         out = subprocess.run(["gcloud", "auth", "list", "--format=value(account)"],
-                             capture_output=True, text=True, timeout=10)
+                             capture_output=True, text=True, timeout=10, check=False)
         return bool(out.stdout.strip())
     except (subprocess.SubprocessError, OSError):
         return False
