@@ -47,6 +47,7 @@ target-version = "py311"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = ["live: hits the live Google API (needs a key; skipped in CI without one)"]
 
 [tool.mypy]
 python_version = "3.11"

@@ -52,12 +52,12 @@ class CruxService:
             return ToolResult(run_id=run_id, content_markdown=md,
                               data={"origin": origin, "has_data": False})
         hist = parse_crux_history(raw)
-        md = [f"**CrUX history — {origin}** ({form_factor}, {hist['n_periods']} windows)"]
+        lines = [f"**CrUX history — {origin}** ({form_factor}, {hist['n_periods']} windows)"]
         for name, series in hist["metrics"].items():
             pts = [v for v in series if v is not None]
             if pts:
-                md.append(f"- `{name}`: {pts[0]:.0f} → {pts[-1]:.0f} (p75, {len(pts)} pts)")
-        return ToolResult(run_id=run_id, content_markdown="\n".join(md),
+                lines.append(f"- `{name}`: {pts[0]:.0f} → {pts[-1]:.0f} (p75, {len(pts)} pts)")
+        return ToolResult(run_id=run_id, content_markdown="\n".join(lines),
                           data={"origin": origin, "has_data": True, **hist})
 
     def query_trend(self, origin: str, form_factor: str = "PHONE") -> ToolResult:
@@ -69,11 +69,12 @@ class CruxService:
                               content_markdown=f"**{origin}**: insufficient CrUX traffic — no trend.",
                               data={"origin": origin, "has_data": False})
         hist = parse_crux_history(raw)
-        trends, md = {}, [f"**CrUX trend — {origin}** ({form_factor}, Mann-Kendall)"]
+        trends: dict = {}
+        lines = [f"**CrUX trend — {origin}** ({form_factor}, Mann-Kendall)"]
         for name, series in hist["metrics"].items():
             t = mann_kendall(series)
             trends[name] = {"direction": t.direction, "s": t.s_statistic, "n": t.n, "delta": t.delta}
             if t.direction != "insufficient":
-                md.append(f"- `{name}`: **{t.direction}** (Δ={t.delta:+.0f}, n={t.n})")
-        return ToolResult(run_id=run_id, content_markdown="\n".join(md),
+                lines.append(f"- `{name}`: **{t.direction}** (Δ={t.delta:+.0f}, n={t.n})")
+        return ToolResult(run_id=run_id, content_markdown="\n".join(lines),
                           data={"origin": origin, "has_data": True, "trends": trends})
