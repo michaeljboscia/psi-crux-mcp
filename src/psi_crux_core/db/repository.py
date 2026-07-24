@@ -18,9 +18,10 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import create_engine, func, inspect, select
 from sqlalchemy.orm import Session
 
+from ..logging import get_logger
 from ..url_identity import UrlIdentity
 from .models import (
     ALL_BRANCH_TABLES, Base, PsiBestPractice, PsiCruxField, PsiCwvElement, PsiDiagnostic,
@@ -51,6 +52,35 @@ _TABLES: dict[str, tuple[Any, tuple[str, ...]]] = {
 
 _INSIGHT_FIELDS = ("canonical_key", "source_audit_id", "details_type", "score",
                    "savings_ms", "item_count", "parse_status")
+
+_log = get_logger("repository")
+
+
+def _script_directory():
+    """Alembic's view of the migrations shipped inside this package."""
+    from alembic.config import Config as AlembicConfig
+    from alembic.script import ScriptDirectory
+
+    cfg = AlembicConfig()
+    cfg.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    return ScriptDirectory.from_config(cfg)
+
+
+def _stamp_head(engine) -> str | None:
+    """
+    Record the current migration head against a DB we just created (LESSONS L-008).
+
+    `create_all` builds the schema directly from the models and writes NO `alembic_version`
+    row. Such a database looks un-migrated, so the next `alembic upgrade` would try to replay
+    migration #1 against tables that already exist and fail. Stamping at creation time keeps
+    the zero-config drop-in path and the managed-upgrade path on the same timeline.
+    """
+    from alembic.runtime.migration import MigrationContext
+
+    script = _script_directory()
+    with engine.begin() as conn:
+        MigrationContext.configure(conn).stamp(script, "head")
+    return script.get_current_head()
 
 
 @dataclass
@@ -124,7 +154,32 @@ class Repository:
             root.mkdir(parents=True, exist_ok=True)
             db_url = f"sqlite:///{root / 'psi_crux.db'}"
         self.engine = create_engine(db_url)
+
+        # A DB is "fresh" only if it holds none of OUR tables. An alembic_version row on its
+        # own doesn't count as content — that is a stamped-but-empty DB, still fresh.
+        existing = set(inspect(self.engine).get_table_names())
+        fresh = not (existing - {"alembic_version"})
+
         Base.metadata.create_all(self.engine)
+
+        if fresh:
+            try:
+                head = _stamp_head(self.engine)
+                _log.info("db_created_and_stamped", head=head)
+            except Exception as e:                  # noqa: BLE001 — never block the drop-in path
+                # Non-fatal by design (REQ-CFG/L-005: hardening must not break the happy path),
+                # but it must be SAID. An unstamped DB fails later, during someone's upgrade.
+                _log.warning("db_stamp_failed", error=str(e),
+                             resolution="run `alembic stamp head` before the next upgrade")
+        elif "alembic_version" not in existing:
+            # Pre-existing tables with no version row: created by an older build of this code.
+            # Its true revision is unknowable from here — guessing a stamp could skip a real
+            # migration and silently corrupt the schema. Say so; let a human stamp it.
+            _log.warning(
+                "db_unstamped_legacy",
+                resolution="this database predates auto-stamping; verify its schema, then run "
+                           "`alembic stamp <revision>` to put it under migration control",
+            )
 
     def persist_scan(
         self, run_id: str, identity: UrlIdentity, strategy: str,
