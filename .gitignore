@@ -41,3 +41,4 @@ LESSONS.md
 .goatrodeo.lock
 .goatrodeo.session
 reference/fixtures/*.raw.json
+HARVEST_PROMPT.md
