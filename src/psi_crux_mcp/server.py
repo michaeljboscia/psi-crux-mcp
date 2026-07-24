@@ -91,15 +91,21 @@ def _guard(tool: str, fn: Callable[[], dict]) -> dict:
 
 
 @mcp.tool()
-def psi_audit(url: str, strategy: str = "mobile") -> dict:
+def psi_audit(url: str, strategy: str = "mobile", runs: int = 1) -> dict:
     """
     Run a full PageSpeed Insights (Lighthouse 13) audit for a URL: scores, Core Web Vitals,
-    and the top optimization insights. Results are projected (LLM-sized) and persisted.
+    real-user CrUX field data, and the top optimization insights. Results are projected
+    (LLM-sized) and persisted.
+
     strategy: "mobile" (default) or "desktop".
+    runs: number of probes (default 1, max 9). Lighthouse varies 5-15% run-to-run on an
+      unchanged page, so a single probe is not reproducible. Pass runs=3 or runs=5 when the
+      number matters (comparing before/after a fix, or reporting to someone). The MEDIAN run
+      is reported; every probe is persisted. Each probe costs 1 API quota unit.
     """
     def body() -> dict:
         validate_target(url)
-        r = _psi_svc().audit(url, strategy)
+        r = _psi_svc().audit(url, strategy, runs)
         return _dual(r["content_markdown"], {"run_id": r["run_id"], **r["data"]})
     return _guard("psi_audit", body)
 

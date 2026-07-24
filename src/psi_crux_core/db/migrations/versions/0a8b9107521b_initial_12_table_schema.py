@@ -1,8 +1,8 @@
 """initial 12-table schema
 
-Revision ID: 6140bcc8c836
+Revision ID: 0a8b9107521b
 Revises: 
-Create Date: 2026-07-23 16:45:00.771257
+Create Date: 2026-07-24 14:18:12.320256
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '6140bcc8c836'
+revision: str = '0a8b9107521b'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,6 +24,9 @@ def upgrade() -> None:
     op.create_table('psi_result',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('run_id', sa.String(length=64), nullable=False),
+    sa.Column('probe_group_id', sa.String(length=64), nullable=False),
+    sa.Column('probe_index', sa.Integer(), nullable=False),
+    sa.Column('is_median', sa.Boolean(), nullable=False),
     sa.Column('input_url', sa.String(length=2048), nullable=False),
     sa.Column('canonical_url', sa.String(length=2048), nullable=False),
     sa.Column('final_url', sa.String(length=2048), nullable=True),
@@ -50,17 +53,21 @@ def upgrade() -> None:
     with op.batch_alter_table('psi_result', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_result_canonical_url'), ['canonical_url'], unique=False)
         batch_op.create_index(batch_op.f('ix_psi_result_normalized_domain'), ['normalized_domain'], unique=False)
+        batch_op.create_index(batch_op.f('ix_psi_result_probe_group_id'), ['probe_group_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_psi_result_run_id'), ['run_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_psi_result_storage_key_url'), ['storage_key_url'], unique=False)
 
     op.create_table('scan_run',
     sa.Column('run_id', sa.String(length=64), nullable=False),
     sa.Column('status', sa.String(length=16), nullable=False),
+    sa.Column('reconciliation', sa.JSON(), nullable=False),
     sa.Column('tables_written', sa.JSON(), nullable=False),
     sa.Column('tables_failed', sa.JSON(), nullable=False),
     sa.Column('parser_warnings', sa.JSON(), nullable=False),
     sa.Column('compat_warnings', sa.JSON(), nullable=False),
     sa.Column('compat_registry_version', sa.String(length=32), nullable=True),
+    sa.Column('runs_requested', sa.Integer(), nullable=False),
+    sa.Column('runs_succeeded', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('run_id')
     )
@@ -72,7 +79,8 @@ def upgrade() -> None:
     sa.Column('canonical_key', sa.String(length=64), nullable=False),
     sa.Column('source_audit_id', sa.String(length=96), nullable=False),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'canonical_key', name='uq_psi_best_practice_result_key')
     )
     with op.batch_alter_table('psi_best_practice', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_best_practice_canonical_key'), ['canonical_key'], unique=False)
@@ -81,6 +89,7 @@ def upgrade() -> None:
     op.create_table('psi_crux_field',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('psi_result_id', sa.Integer(), nullable=False),
+    sa.Column('granularity', sa.String(length=8), nullable=False),
     sa.Column('form_factor', sa.String(length=16), nullable=False),
     sa.Column('metric', sa.String(length=64), nullable=False),
     sa.Column('category', sa.String(length=24), nullable=True),
@@ -90,7 +99,8 @@ def upgrade() -> None:
     sa.Column('poor', sa.Float(), nullable=True),
     sa.Column('fid_p75', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'granularity', 'form_factor', 'metric', name='uq_psi_crux_field_result_metric')
     )
     with op.batch_alter_table('psi_crux_field', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_crux_field_psi_result_id'), ['psi_result_id'], unique=False)
@@ -117,7 +127,8 @@ def upgrade() -> None:
     sa.Column('canonical_key', sa.String(length=64), nullable=False),
     sa.Column('source_audit_id', sa.String(length=96), nullable=False),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'canonical_key', name='uq_psi_diagnostic_result_key')
     )
     with op.batch_alter_table('psi_diagnostic', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_diagnostic_canonical_key'), ['canonical_key'], unique=False)
@@ -135,7 +146,8 @@ def upgrade() -> None:
     sa.Column('canonical_key', sa.String(length=64), nullable=False),
     sa.Column('source_audit_id', sa.String(length=96), nullable=False),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'canonical_key', name='uq_psi_insight_result_key')
     )
     with op.batch_alter_table('psi_insight', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_insight_canonical_key'), ['canonical_key'], unique=False)
@@ -147,7 +159,8 @@ def upgrade() -> None:
     sa.Column('group', sa.String(length=64), nullable=False),
     sa.Column('duration_ms', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'group', name='uq_psi_main_thread_result_group')
     )
     with op.batch_alter_table('psi_main_thread', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_main_thread_psi_result_id'), ['psi_result_id'], unique=False)
@@ -169,12 +182,14 @@ def upgrade() -> None:
     op.create_table('psi_opportunity',
     sa.Column('wasted_bytes', sa.Integer(), nullable=True),
     sa.Column('wasted_ms', sa.Float(), nullable=True),
+    sa.Column('item_count', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('psi_result_id', sa.Integer(), nullable=False),
     sa.Column('canonical_key', sa.String(length=64), nullable=False),
     sa.Column('source_audit_id', sa.String(length=96), nullable=False),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'canonical_key', name='uq_psi_opportunity_result_key')
     )
     with op.batch_alter_table('psi_opportunity', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_opportunity_canonical_key'), ['canonical_key'], unique=False)
@@ -187,7 +202,8 @@ def upgrade() -> None:
     sa.Column('request_count', sa.Integer(), nullable=True),
     sa.Column('transfer_size', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'resource_type', name='uq_psi_resource_summary_result_type')
     )
     with op.batch_alter_table('psi_resource_summary', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_resource_summary_psi_result_id'), ['psi_result_id'], unique=False)
@@ -213,7 +229,8 @@ def upgrade() -> None:
     sa.Column('canonical_key', sa.String(length=64), nullable=False),
     sa.Column('source_audit_id', sa.String(length=96), nullable=False),
     sa.ForeignKeyConstraint(['psi_result_id'], ['psi_result.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('psi_result_id', 'canonical_key', 'entity', name='uq_psi_third_party_result_entity')
     )
     with op.batch_alter_table('psi_third_party', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_psi_third_party_canonical_key'), ['canonical_key'], unique=False)
@@ -279,6 +296,7 @@ def downgrade() -> None:
     with op.batch_alter_table('psi_result', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_psi_result_storage_key_url'))
         batch_op.drop_index(batch_op.f('ix_psi_result_run_id'))
+        batch_op.drop_index(batch_op.f('ix_psi_result_probe_group_id'))
         batch_op.drop_index(batch_op.f('ix_psi_result_normalized_domain'))
         batch_op.drop_index(batch_op.f('ix_psi_result_canonical_url'))
 

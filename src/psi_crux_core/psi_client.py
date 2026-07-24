@@ -15,11 +15,20 @@ from .keyring import Keyring
 from .logging import get_logger
 
 
+class PsiMalformedResponse(Exception):
+    """A 200 whose body is not usable JSON, or is JSON without `lighthouseResult`.
+
+    Both happen in the wild (proxy/error pages served with a 200). Left unhandled they surface
+    as a raw JSONDecodeError or a KeyError deep in a parser — an upstream problem wearing the
+    costume of a code bug. Treated as transient so the retry path handles it.
+    """
+
+
 def _is_transient(exc: BaseException) -> bool:
-    """Retry 5xx + network errors; never retry 4xx (REQ-ENG-001)."""
+    """Retry 5xx + network errors + malformed 200s; never retry 4xx (REQ-ENG-001)."""
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code >= 500
-    return isinstance(exc, (httpx.TimeoutException, httpx.TransportError))
+    return isinstance(exc, (httpx.TimeoutException, httpx.TransportError, PsiMalformedResponse))
 
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 DEFAULT_CATEGORIES = ("performance", "best-practices", "accessibility", "seo")
@@ -65,7 +74,18 @@ class PsiClient:
         if resp.status_code == 429:
             self._keyring.mark_rate_limited(lease, _retry_after(resp))
         resp.raise_for_status()
-        return resp.json()
+        return _parse_body(resp)
+
+
+def _parse_body(resp: httpx.Response) -> dict:
+    """Validate the 200 before handing it to a parser (harvest #15/#40)."""
+    try:
+        body = resp.json()
+    except ValueError as e:
+        raise PsiMalformedResponse(f"200 with non-JSON body ({e})") from e
+    if not isinstance(body, dict) or "lighthouseResult" not in body:
+        raise PsiMalformedResponse("200 JSON without a lighthouseResult")
+    return body
 
 
 def _www_flip(url: str) -> str:

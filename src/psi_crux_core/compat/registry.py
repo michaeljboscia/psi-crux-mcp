@@ -53,3 +53,11 @@ class CompatRegistry:
             aid for aid, e in self._audits.items()
             if aid.endswith("-insight") and e.get("status") in ("primary", "conditional")
         ]
+
+    def ids_with_role(self, role: str) -> list[str]:
+        """
+        Audit IDs tagged with a parser role ("diagnostic", "opportunity"). Parsers ask for a
+        role instead of carrying their own ID list, so an LH version bump is a registry-data
+        change (CalVer) rather than a code release (REQ-COMPAT-001).
+        """
+        return [aid for aid, e in self._audits.items() if e.get("role") == role]

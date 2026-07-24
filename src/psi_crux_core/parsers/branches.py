@@ -31,17 +31,49 @@ def parse_scripts(payload: dict) -> list[dict]:
 
 
 def parse_opportunities(payload: dict, registry: CompatRegistry) -> list[dict]:
+    """
+    One row per opportunity AUDIT, bytes summed across its items (GTM keyed
+    (psi_result_id, opportunity_id)). Emitting a row per item repeated the audit-level
+    `overallSavingsMs` on every row and left no usable unique key.
+
+    Audit IDs come from the registry role, never a literal list (REQ-COMPAT-001).
+    """
+    audits = (payload.get("lighthouseResult") or {}).get("audits", {})
     rows = []
-    for aid in ("unused-javascript", "unused-css-rules"):
-        det = ((payload.get("lighthouseResult") or {}).get("audits", {}).get(aid) or {}).get("details") or {}
+    for aid in registry.ids_with_role("opportunity"):
+        det = (audits.get(aid) or {}).get("details") or {}
         items = det.get("items") or []
         if not items:
             continue
-        wasted_ms = det.get("overallSavingsMs")
-        for it in items:
-            rows.append({"source_audit_id": aid,
-                         "canonical_key": registry.resolve(aid).canonical_key,
-                         "wasted_bytes": it.get("wastedBytes"), "wasted_ms": wasted_ms})
+        wasted_bytes = sum(it.get("wastedBytes") or 0 for it in items) or None
+        rows.append({"source_audit_id": aid,
+                     "canonical_key": registry.resolve(aid).canonical_key,
+                     "wasted_bytes": wasted_bytes,
+                     "wasted_ms": det.get("overallSavingsMs"),
+                     "item_count": len(items)})
+    return rows
+
+
+def parse_diagnostics(payload: dict, registry: CompatRegistry) -> list[dict]:
+    """
+    psi_diagnostic rows (G3 — schema existed but nothing ever produced rows for it).
+    Diagnostics are the informative/timing audits carrying a numericValue; the set is
+    registry-driven via role="diagnostic". An audit absent from the response is skipped,
+    not defaulted — absence is data, not zero.
+    """
+    audits = (payload.get("lighthouseResult") or {}).get("audits", {})
+    rows = []
+    for aid in registry.ids_with_role("diagnostic"):
+        audit = audits.get(aid)
+        if audit is None:                       # audit not emitted by this LH version
+            continue
+        nv = audit.get("numericValue")
+        if nv is None:                          # present but no value → not a measurement
+            continue
+        rows.append({"source_audit_id": aid,
+                     "canonical_key": registry.resolve(aid).canonical_key,
+                     "numeric_value": nv,
+                     "details": None})
     return rows
 
 

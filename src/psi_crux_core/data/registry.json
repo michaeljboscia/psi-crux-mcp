@@ -1,5 +1,5 @@
 {
-  "registry_version": "2026.07.22",
+  "registry_version": "2026.07.24",
   "lighthouse_version": "13.4.0",
   "audits": {
     "cache-insight": {
@@ -88,15 +88,18 @@
     },
     "unused-javascript": {
       "canonical_key": "js_unused",
-      "status": "legacy_fallback"
+      "status": "legacy_fallback",
+      "role": "opportunity"
     },
     "unused-css-rules": {
       "canonical_key": "css_unused",
-      "status": "legacy_fallback"
+      "status": "legacy_fallback",
+      "role": "opportunity"
     },
     "total-byte-weight": {
       "canonical_key": "total_byte_weight",
-      "status": "legacy_fallback"
+      "status": "legacy_fallback",
+      "role": "diagnostic"
     },
     "layout-shifts": {
       "canonical_key": "cls_culprits",
@@ -113,6 +116,41 @@
     "critical-request-chains": {
       "canonical_key": null,
       "status": "removed"
+    },
+    "server-response-time": {
+      "canonical_key": "server_response_time",
+      "status": "primary",
+      "role": "diagnostic"
+    },
+    "network-rtt": {
+      "canonical_key": "network_rtt",
+      "status": "primary",
+      "role": "diagnostic"
+    },
+    "network-server-latency": {
+      "canonical_key": "network_server_latency",
+      "status": "primary",
+      "role": "diagnostic"
+    },
+    "redirects": {
+      "canonical_key": "redirects",
+      "status": "primary",
+      "role": "diagnostic"
+    },
+    "max-potential-fid": {
+      "canonical_key": "max_potential_fid",
+      "status": "legacy_fallback",
+      "role": "diagnostic"
+    },
+    "unminified-css": {
+      "canonical_key": "css_unminified",
+      "status": "legacy_fallback",
+      "role": "opportunity"
+    },
+    "unminified-javascript": {
+      "canonical_key": "js_unminified",
+      "status": "legacy_fallback",
+      "role": "opportunity"
     }
   }
 }
